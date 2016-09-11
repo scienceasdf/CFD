@@ -35,7 +35,7 @@ int main()
     double cj;
     int n=0;    //n means the number of the points, as points are from zero to (n-1)
     std::string foilName;
-    std::ifstream in("e://SD7037.dat");
+    std::ifstream in("e://S1223.dat");
     if(!in.is_open()){
         std::cout << "Error opening file";
         exit (1);
@@ -45,11 +45,12 @@ int main()
     while (!in.eof() )
     {
         in>>px[n]>>py[n];
-        std::cout<<px[n]<<"\t"<<py[n]<<"\n";
+        //std::cout<<px[n]<<"\t"<<py[n]<<"\n";
         ++n;
     }
     --n;
-    std::cout<<px[n-1]<<"\t"<<py[n-1]<<"\n";
+    --n;
+    //std::cout<<px[n-1]<<"\t"<<py[n-1]<<"\n";
 
     //std::vector<double> px,py,ctrlpx,ctrlpy,nx,ny,beta,gamma;
 
@@ -58,7 +59,7 @@ int main()
     v.conservativeResize(n,1);
 
     double dx=.0,dy=.0;
-    for(int i=0;i<n-1;++i){
+    for(int i=0;i<n;++i){
         phi[i]=std::atan2(py[i+1]-py[i],px[i+1]-px[i]);
         ctrlpx[i]=(px[i]+px[i+1])/2.0;
         ctrlpy[i]=(py[i]+py[i+1])/2.0;
@@ -69,16 +70,21 @@ int main()
         s[i]=pow((py[i]-py[i+1])*(py[i]-py[i+1])+(px[i+1]-px[i])*(px[i+1]-px[i]),.5);
 
     }
-    ctrlpx[n-1]=(px[0]+px[n-1])/2.0;
-    ctrlpy[n-1]=(py[0]+py[n-1])/2.0;
-    s[n-1]=pow((py[0]-py[n-2])*(py[0]-py[n-2])+(px[0]-px[n-2])*(px[0]-px[n-2]),.5);
+    //ctrlpx[n-1]=(px[0]+px[n-2])/2.0;
+    //ctrlpy[n-1]=(py[0]+py[n-2])/2.0;
+    //nx[n-1]=py[i]-py[i+1];
+    //ny[i]=px[i+1]-px[i];
+    //phi[n-1]=std::atan2(py[0]-py[n-2],px[0]-px[n-2]);
+    //beta[n-1]=std::atan2(.0-ny[n],nx[i])+alpha;
+    //std::cout<<ctrlpx[n-1]<<"\t"<<ctrlpy[n-1]<<"\n";
+    //s[n-1]=pow((py[0]-py[n-2])*(py[0]-py[n-2])+(px[0]-px[n-2])*(px[0]-px[n-2]),.5);
 
     for(int i=0;i<n;++i){
         for(int j=0;j<n;++j){
-            aa=-(px[i]-px[j])*cos(phi[j])-(py[i]-py[j])*sin(phi[j]);
-            bb=(px[i]-px[j])*(px[i]-px[j])+(py[i]-py[j])*(py[i]-py[j]);
+            aa=-(ctrlpx[i]-px[j])*cos(phi[j])-(ctrlpy[i]-py[j])*sin(phi[j]);
+            bb=(ctrlpx[i]-px[j])*(ctrlpx[i]-px[j])+(ctrlpy[i]-py[j])*(ctrlpy[i]-py[j]);
             cc=sin(phi[i]-phi[j]);
-            dd=(py[i]-py[j])*cos(phi[i])-(px[i]-px[j])*sin(phi[i]);
+            dd=(ctrlpy[i]-py[j])*cos(phi[i])-(ctrlpx[i]-px[j])*sin(phi[i]);
             ee=pow(bb-aa*aa,.5);
 
             dx=ctrlpx[i]-ctrlpx[j];
@@ -87,15 +93,20 @@ int main()
             cj=cj-(dy/dx/dx*nx[i]+1.0/dx*ny[i]);*/
 
             cj=.5*cc*std::log((s[j]*s[j]+2.0*aa*s[j]+bb)/bb)+
-                    (dd-aa*cc)/ee*(std::atan2(s[j]+aa,ee)-std::atan2(aa,ee));
-            std::cout<<cj<<"\n";
+                    (dd-aa*cc)/ee*(std::atan((s[j]+aa)/ee)-std::atan(aa/ee));
+
             A(i,j)=(i==j)?.5:cj/tPi;            //Maybe here A(i,j) use the reload of the operator ()
+            if(std::isnan(A(i,j))|| std::isinf(A(i,j))){
+                std::cout<<i<<"\t"<<j<<"\n";
+            }
         }
     }
-    for(int i=1;i<n;++i){
-        A(10,i)=.0;
+    A(n-1,0)=.5;
+
+    /*for(int i=1;i<n;++i){
+        A(20,i)=.0;
     }
-    A(10,0)=1.0;    A(10,n-1)=1.0;
+    A(20,0)=1.0;    A(20,n-1)=1.0;*/
 
     gamma=A.inverse()*v;
 
