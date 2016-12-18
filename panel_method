@@ -1,0 +1,121 @@
+#include <iostream>
+#include<vector>
+#include<cmath>
+#include<fstream>
+#include<string>
+#include<E:\eigen\Eigen/Dense>
+#include<E:\eigen\Eigen/LU>
+
+
+int main()
+{
+
+    const double tPi=6.28319;
+    const double pi=3.14159265358;
+    const double d1=1.59153943e-1;
+
+    double vInf=1.0;
+    double alpha=.0*tPi/360.0;
+    double airDen=1.225;
+
+    double px[100],py[100],ctrlpx[100],ctrlpy[100],s[100],theta[100];
+
+    //At present here I use array instead of std::vector
+    Eigen::MatrixXd A;
+    Eigen::VectorXd gamma;
+    Eigen::VectorXd v;
+    Eigen::MatrixXd r;
+    Eigen::MatrixXd beta;
+
+    int n=0;    //n means the number of the points, as points are from zero to (n-1)
+    std::string foilName;
+    std::ifstream in("e://goe 795.dat");
+    if(!in.is_open()){
+        std::cout << "Error opening file";
+        exit (1);
+    }
+    in>>foilName;
+    std::cout<<foilName<<"\n";
+    while (!in.eof() )
+    {
+        in>>px[n]>>py[n];
+        //std::cout<<px[n]<<"\t"<<py[n]<<"\n";
+        ++n;
+    }
+    --n;
+    --n;
+    std::cout<<n<<"\t"<<px[n]<<"\t"<<py[n]<<"\n";
+
+    //std::vector<double> px,py,ctrlpx,ctrlpy,nx,ny,beta,gamma;
+
+    A.conservativeResize(n+1,n+1);
+    gamma.conservativeResize(n+1,1);
+    v.conservativeResize(n+1,1);
+    r.conservativeResize(n+1,n+1);
+    beta.conservativeResize(n+1,n+1);
+
+    for(int i=0;i<n;++i){
+        theta[i]=std::atan2(py[i+1]-py[i],px[i+1]-px[i]);
+        ctrlpx[i]=(px[i]+px[i+1])/2.0;
+        ctrlpy[i]=(py[i]+py[i+1])/2.0;
+        s[i]=pow((py[i]-py[i+1])*(py[i]-py[i+1])+(px[i+1]-px[i])*(px[i+1]-px[i]),.5);
+
+    }
+
+
+    for(int i=0;i<n;++i){
+        A(i,n)=.0;
+        for(int j=0;j<n;++j){
+            r(i,j+1)=pow((ctrlpx[i]-px[j+1])*(ctrlpx[i]-px[j+1])+(ctrlpy[i]-py[j+1])*(ctrlpy[i]-py[j+1]),.5);
+            r(i,j+0)=pow((ctrlpx[i]-px[j+0])*(ctrlpx[i]-px[j+0])+(ctrlpy[i]-py[j+0])*(ctrlpy[i]-py[j+0]),.5);
+            beta(i,j)=(i==j)?pi:
+                             std::atan2((ctrlpy[i]-py[j+1])*(ctrlpx[i]-px[j])-(ctrlpx[i]-px[j+1])*(ctrlpy[i]-py[j]),
+                                        (ctrlpy[i]-py[j+1])*(ctrlpy[i]-py[j])+(ctrlpx[i]-px[j+1])*(ctrlpx[i]-px[j]));
+            A(i,j)=sin(theta[i]-theta[j])*d1*std::log(r(i,j+1)/r(i,j))+
+                    cos(theta[i]-theta[j])*d1*beta(i,j);
+            A(i,n)+=cos(theta[i]-theta[j])*d1*std::log(r(i,j+1)/r(i,j))-
+                    sin(theta[i]-theta[j])*d1*beta(i,j);
+            //The blocks here can be optimum as too many repeated varibles
+            //std::cout<<A(i,j)<<"\t";
+            if(std::isnan(A(i,j))){
+                std::cout<<A(i,j)<<"\t";
+            }
+        }
+        v[i]=vInf*sin(theta[i]-alpha);
+        //std::cout<<A(i,n)<<"\n";
+        std::cout<<v[i]<<"\n";
+    }
+
+    //The (n+1)th column is the eqution for Kutta Condition
+    A(n,n)=.0;
+    for(int j=0;j<n;++j){
+        A(n,j)=beta(0,j)*sin(theta[0]-theta[j])-
+                cos(theta[0]-theta[j])*std::log(r(0,j+1)/r(0,j))+
+                beta(n-1,j)*sin(theta[n-1]-theta[j])-
+                cos(theta[n-1]-theta[j])*std::log(r(n-1,j+1)/r(n-1,j));
+        A(n,j)*=d1;
+        A(n,n)+=beta(0,j)*cos(theta[0]-theta[j])+
+                sin(theta[0]-theta[j])*std::log(r(0,j+1)/r(0,j))+
+                beta(n-1,j)*cos(theta[n-1]-theta[j])+
+                sin(theta[n-1]-theta[j])*std::log(r(n-1,j+1)/r(n-1,j));
+
+    }
+    A(n,n)*=d1;
+    v[n]=-vInf*cos(theta[0]-alpha)-vInf*cos(theta[n-1]-alpha);
+
+    gamma=A.inverse()*v;
+
+    double L=.0;
+    double Cl=.0;
+    for(int i=0;i<n;++i){
+        Cl+=s[i];
+        std::cout<<gamma[i]<<"\n";
+    }
+
+    std::cout<<Cl<<"\t"<<gamma[n]<<"\n";
+
+    Cl*=2.0*gamma[n]/vInf;
+    std::cout<<"\n\n"<<Cl;
+    return 0;
+}
+
