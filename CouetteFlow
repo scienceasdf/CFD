@@ -1,0 +1,83 @@
+#include<algorithm>
+#include<iostream>
+
+#define numPoints 21
+
+const double dy=1.0/(double)(numPoints-1.0);
+const double E=1.0;
+const double Re=5000.0;
+
+double* root(double* a, double* b, double* c, double* d, int n)
+{
+    //n is the number of dialgnol elements
+    if(n==1){
+        double* x=new double[1];
+        x[0]=d[0]/b[0];
+        return x;
+    }
+    else{
+        double* alpha=new double[n-1];
+        double* beta;
+        beta=new double[n];
+        beta[0]=b[0];
+        for(int i=0;i<=n-2;++i){
+            alpha[i]=a[i]/beta[i];
+            beta[i+1]=b[i+1]-alpha[i]*(c[i]);
+        }
+        double* x=new double[n],*y=new double[n];
+        y[0]=d[0];
+        for(int i=1;i<=n-1;++i) y[i]=d[i]-alpha[i-1]*(y[i-1]);
+        x[n-1]=beta[n-1];
+        for(int i=n-1;i>=0;--i) x[i]=(y[i]-c[i]*x[i+1])/beta[i];
+        delete [] y;
+        delete [] alpha;
+        delete [] beta;
+        return x;
+    }
+}
+
+int main()
+{
+
+
+    double u[numPoints];
+    std::fill(u,u+numPoints,.0);
+    u[numPoints-1]=1.0;
+    double A=-.5*E;
+    double B=1.0+E;
+
+    double a[numPoints-3];
+    double b[numPoints-2];
+    double c[numPoints-3];
+
+    std::fill(a,a+numPoints-3,A);
+    std::fill(b,b+numPoints-2,B);
+    std::fill(c,c+numPoints-3,A);
+    double* r;
+
+    double k[numPoints-2];
+
+    for(int counter=0;counter<240;++counter){
+
+        for(int j=0;j<numPoints-2;++j){
+            k[j]=(1.0-E)*u[j+1]+.5*E*(u[j+2]+u[j]);
+
+        }
+        k[numPoints-3]-=A;
+
+        r=root(a,b,c,k,numPoints-2);
+        for(int i=1;i<numPoints-1;++i){
+            u[i]=r[i-1];
+        }
+        delete [] r;
+        u[0]=.0; u[numPoints-1]=1.0;
+
+    }
+
+
+    for(int i=0;i<numPoints;++i){
+        std::cout<<u[i]<<"\n";
+    }
+
+    return 0;
+}
